@@ -1,5 +1,7 @@
 const commandLineArgs = require("command-line-args");
-const { exec } = require("child_process");
+const util = require("util");
+const exec = util.promisify(require("child_process").exec);
+const chalk = require("chalk");
 
 const cliArgsDefinitions = [
   {
@@ -16,8 +18,11 @@ const cliArgsDefinitions = [
 ];
 
 const focusUri = "spotify:playlist:0vvXsWCC9xrXsKd4FyS8kM";
+const focusVolume = 57;
 const restUri = "spotify:track:7HrE6HtYNBbGqp5GmHbFV0";
-const doneUri = "spotify:playlist:4ZcGI2hFTy5Rruln175z9X";
+const restVolume = 55;
+const doneUri = "spotify:playlist:1OJW3eYKYtMNVlF8AbRV0q";
+const doneVolume = 45;
 const cliArgs = commandLineArgs(cliArgsDefinitions);
 
 const goal = cliArgs.goal ? cliArgs.goal.join(" ") : null;
@@ -33,53 +38,57 @@ const restDuration = cliArgs.restDuration
   : defaultRestDuration;
 const quiet = cliArgs.quiet ? cliArgs.quiet : false;
 
-function playFocusMusic() {
+async function playFocusMusic() {
   playSpotifyUri(focusUri);
 }
 
-function playRestMusic() {
+async function playRestMusic() {
   playSpotifyUri(restUri);
 }
 
-function playDoneMusic() {
+async function playDoneMusic() {
   playSpotifyUri(doneUri);
 }
 
-function playSpotifyUri(uri) {
-  exec(`spotify play uri ${uri}`, (error, stdout, stderr) => {
-    if (error) {
-      console.log(
-        `Could not play Spotify, did you run install.sh? Error: ${error.message}`
-      );
-      return;
-    }
-    if (stderr) {
-      console.error(stderr);
-      return;
-    }
-
-    console.log(stdout);
-  });
+async function playSpotifyUri(uri) {
+  const { _, stderr } = await exec(`spotify play uri ${uri}`);
+  if (stderr) {
+    console.error(stderr);
+  }
+  console.log(chalk.dim("Playing music."));
 }
 
-function stopMusic() {
-  exec("spotify stop", (error, stdout, stderr) => {
-    console.log(stdout);
-  });
+async function stopMusic() {
+  const { _, stderr } = await exec("spotify stop");
+  if (stderr) {
+    console.error(stderr);
+  }
+  console.log(chalk.dim("Stopped music."));
 }
 
 function getSessionStartMessage(currentSession) {
-  const prefix = `### Focus for ${focusDuration} minutes (${currentSession}/${sessions})`;
+  const prefix = `### Focus for ${focusDuration}min (${currentSession}/${sessions})`;
   const suffix = "###";
+  let msg = "";
   if (goal) {
-    return prefix + `: ${goal} ` + suffix;
+    msg = prefix + `: ${goal} ` + suffix;
   } else {
-    return prefix + " " + suffix;
+    msg = prefix + " " + suffix;
   }
+
+  return chalk.blue.bold(msg);
 }
 
 function getRestMessage() {
-  return `### Nice work, rest for ${restDuration} minutes ###`;
+  return chalk.magenta.bold(`### Nice work, rest for ${restDuration}min ###`);
+}
+
+async function setVolume(volume) {
+  const { _, stderr } = exec(`spotify vol ${volume}`);
+  if (stderr) {
+    console.error(stderr);
+  }
+  console.log(chalk.dim(`Volume: ${volume}`));
 }
 
 async function wait(minutes) {
@@ -106,22 +115,36 @@ async function main() {
   for (let currentSession = 1; currentSession <= sessions; ++currentSession) {
     console.log(getSessionStartMessage(currentSession));
     if (quiet) {
-      stopMusic();
+      await stopMusic();
     } else {
-      playFocusMusic();
+      await setVolume(focusVolume);
+      await playFocusMusic();
     }
     await wait(focusDuration);
 
     if (currentSession < sessions) {
       console.log(getRestMessage());
+      await setVolume(restVolume);
       playRestMusic();
       await wait(restDuration);
     }
   }
 
-  console.log("### Congrats! You finished your focus sessions :)");
-  playDoneMusic();
+  console.log(
+    chalk.green.bold("### Congrats! You finished your focus sessions :)")
+  );
+
+  await setVolume(doneVolume);
+  await playDoneMusic();
 }
+
+process.on("SIGINT", function () {
+  console.log(chalk.bold.yellow("\nStopping..."));
+
+  stopMusic().finally(() => {
+    process.exit();
+  });
+});
 
 main().catch((error) => {
   console.log(error);
