@@ -12,6 +12,7 @@
   "license": "ISC",
   "dependencies": {
     "chalk": "^4.1.0",
-    "command-line-args": "^5.1.1"
+    "command-line-args": "^5.1.1",
+    "toml": "^3.0.0"
   }
 }

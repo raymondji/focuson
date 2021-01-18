@@ -2,7 +2,34 @@ const commandLineArgs = require("command-line-args");
 const util = require("util");
 const exec = util.promisify(require("child_process").exec);
 const chalk = require("chalk");
+const fs = require("fs");
+const toml = require("toml");
+const { homedir } = require("os");
 
+// ========================
+// Read config file options
+// ========================
+const configFile = `${homedir()}/.focuson.toml`;
+
+let CONFIG = {};
+if (fs.existsSync(configFile)) {
+  console.log(chalk.dim(`Reading config file from ${configFile}`));
+  CONFIG = toml.parse(fs.readFileSync(configFile, "utf8"));
+}
+
+const focusUri = CONFIG["focus"]["uri"]; // "spotify:playlist:0vvXsWCC9xrXsKd4FyS8kM";
+const focusVolume = CONFIG["focus"]["volume"] ? CONFIG["focus"]["volume"] : 50;
+const restUri = CONFIG["rest"]["uri"]; // "spotify:track:7HrE6HtYNBbGqp5GmHbFV0";
+const restVolume = CONFIG["rest"]["volume"] ? CONFIG["rest"]["volume"] : 50;
+const doneUri = CONFIG["done"]["uri"]; // "spotify:playlist:1OJW3eYKYtMNVlF8AbRV0q";
+const doneVolume = CONFIG["done"]["volume"] ? CONFIG["done"]["volume"] : 50;
+const defaultSessions = CONFIG["defaultSessions"]
+  ? CONFIG["defaultSessions"]
+  : 3;
+
+// =============
+// Read cli args
+// =============
 const cliArgsDefinitions = [
   {
     name: "goal",
@@ -17,37 +44,57 @@ const cliArgsDefinitions = [
   { name: "quiet", alias: "q", type: Boolean },
 ];
 
-const focusUri = "spotify:playlist:0vvXsWCC9xrXsKd4FyS8kM";
-const focusVolume = 57;
-const restUri = "spotify:track:7HrE6HtYNBbGqp5GmHbFV0";
-const restVolume = 55;
-const doneUri = "spotify:playlist:1OJW3eYKYtMNVlF8AbRV0q";
-const doneVolume = 45;
 const cliArgs = commandLineArgs(cliArgsDefinitions);
 
 const goal = cliArgs.goal ? cliArgs.goal.join(" ") : null;
-const defaultSessions = 3;
+
 const sessions = cliArgs.sessions ? cliArgs.sessions : defaultSessions;
-const defaultFocusDuration = 20;
+const defaultFocusDuration = CONFIG["focus"]["defaultDuration"]
+  ? CONFIG["focus"]["defaultDuration"]
+  : 20;
 const focusDuration = cliArgs.focusDuration
   ? cliArgs.focusDuration
   : defaultFocusDuration;
-const defaultRestDuration = 20;
+const defaultRestDuration = CONFIG["rest"]["defaultDuration"]
+  ? CONFIG["rest"]["defaultDuration"]
+  : 1;
 const restDuration = cliArgs.restDuration
   ? cliArgs.restDuration
   : defaultRestDuration;
 const quiet = cliArgs.quiet ? cliArgs.quiet : false;
 
+// ===========
+// Main script
+// ===========
+
 async function playFocusMusic() {
-  playSpotifyUri(focusUri);
+  if (!focusUri) {
+    console.log(chalk.dim("Shh, no focus URI provided."));
+    return;
+  }
+
+  await setVolume(focusVolume);
+  await playSpotifyUri(focusUri);
 }
 
 async function playRestMusic() {
-  playSpotifyUri(restUri);
+  if (!focusUri) {
+    console.log(chalk.dim("Shh, no rest URI provided."));
+    return;
+  }
+
+  await setVolume(restVolume);
+  await playSpotifyUri(restUri);
 }
 
 async function playDoneMusic() {
-  playSpotifyUri(doneUri);
+  if (!focusUri) {
+    console.log(chalk.dim("Shh, no done URI provided."));
+    return;
+  }
+
+  await setVolume(doneVolume);
+  await playSpotifyUri(doneUri);
 }
 
 async function playSpotifyUri(uri) {
@@ -97,35 +144,19 @@ async function wait(minutes) {
   });
 }
 
-async function startSesssion(currentSession) {
-  console.log(getSessionStartMessage(currentSession));
-  if (quiet) {
-    stopMusic();
-  } else {
-    playFocusMusic();
-  }
-  await wait(focusDuration);
-
-  console.log(getRestMessage());
-  playRestMusic();
-  await wait(restDuration);
-}
-
 async function main() {
   for (let currentSession = 1; currentSession <= sessions; ++currentSession) {
     console.log(getSessionStartMessage(currentSession));
     if (quiet) {
       await stopMusic();
     } else {
-      await setVolume(focusVolume);
       await playFocusMusic();
     }
     await wait(focusDuration);
 
     if (currentSession < sessions) {
       console.log(getRestMessage());
-      await setVolume(restVolume);
-      playRestMusic();
+      await playRestMusic();
       await wait(restDuration);
     }
   }
@@ -134,7 +165,6 @@ async function main() {
     chalk.green.bold("### Congrats! You finished your focus sessions :)")
   );
 
-  await setVolume(doneVolume);
   await playDoneMusic();
 }
 
