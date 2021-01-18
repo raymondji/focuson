@@ -150,7 +150,7 @@ async function main() {
   for (let currentSession = 1; currentSession <= sessions; ++currentSession) {
     console.log(getSessionStartMessage(currentSession));
     if (quiet) {
-      await stopMusic();
+      await stopbhMusic();
     } else {
       await playFocusMusic();
     }
@@ -171,7 +171,7 @@ async function main() {
 }
 
 process.on("SIGINT", function () {
-  console.log(chalk.bold.yellow("\nStopping..."));
+  console.log(chalk.bold.gray("\nStopping..."));
 
   stopMusic().finally(() => {
     process.exit();
