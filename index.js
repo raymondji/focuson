@@ -3,13 +3,13 @@ const util = require("util");
 const exec = util.promisify(require("child_process").exec);
 const chalk = require("chalk");
 const fs = require("fs");
-const toml = require("toml");
+const toml = require("@iarna/toml");
 const { homedir } = require("os");
 
 // ========================
 // Read config file options
 // ========================
-const configFile = `${homedir()}/.focuson.toml`;
+const configFile = `${homedir()}/.focuson.cfg.toml`;
 
 let CONFIG = {};
 if (fs.existsSync(configFile)) {
@@ -26,14 +26,17 @@ const doneVolume = CONFIG["done"]["volume"] ? CONFIG["done"]["volume"] : 50;
 const defaultSessions = CONFIG["defaultSessions"]
   ? CONFIG["defaultSessions"]
   : 3;
+const logFile = CONFIG["logFile"]
+  ? CONFIG["logFile"]
+  : `${homedir()}/focuson.log.txt`;
 
 // =============
 // Read cli args
 // =============
 const cliArgsDefinitions = [
   {
-    name: "goal",
-    alias: "g",
+    name: "task",
+    alias: "t",
     type: String,
     multiple: true,
     defaultOption: true,
@@ -46,7 +49,7 @@ const cliArgsDefinitions = [
 
 const cliArgs = commandLineArgs(cliArgsDefinitions);
 
-const goal = cliArgs.goal ? cliArgs.goal.join(" ") : null;
+const task = cliArgs.task ? cliArgs.task.join(" ") : null;
 
 const sessions = cliArgs.sessions ? cliArgs.sessions : defaultSessions;
 const defaultFocusDuration = CONFIG["focus"]["defaultDuration"]
@@ -69,7 +72,8 @@ const quiet = cliArgs.quiet ? cliArgs.quiet : false;
 
 async function playFocusMusic() {
   if (!focusUri) {
-    console.log(chalk.dim("Shh, no focus URI provided."));
+    console.log(chalk.dim("Shh, no focus URI set."));
+    await stopMusic();
     return;
   }
 
@@ -78,8 +82,9 @@ async function playFocusMusic() {
 }
 
 async function playRestMusic() {
-  if (!focusUri) {
-    console.log(chalk.dim("Shh, no rest URI provided."));
+  if (!restUri) {
+    console.log(chalk.dim("Shh, no rest URI set."));
+    await stopMusic();
     return;
   }
 
@@ -88,8 +93,9 @@ async function playRestMusic() {
 }
 
 async function playDoneMusic() {
-  if (!focusUri) {
-    console.log(chalk.dim("Shh, no done URI provided."));
+  if (!doneUri) {
+    console.log(chalk.dim("Shh, no done URI set."));
+    await stopMusic();
     return;
   }
 
@@ -117,8 +123,8 @@ function getSessionStartMessage(currentSession) {
   const prefix = `### 🧑🏻‍💻 Focus for ${focusDuration}min (${currentSession}/${sessions})`;
   const suffix = "###";
   let msg = "";
-  if (goal) {
-    msg = prefix + `: ${goal} ` + suffix;
+  if (task) {
+    msg = prefix + `: ${task} ` + suffix;
   } else {
     msg = prefix + " " + suffix;
   }
@@ -146,6 +152,38 @@ async function wait(minutes) {
   });
 }
 
+function readLogFile() {
+  let parsedLog = {};
+  if (fs.existsSync(logFile)) {
+    parsedLog = toml.parse(fs.readFileSync(logFile, "utf-8"));
+  }
+
+  return parsedLog;
+}
+
+function getTodayDate() {
+  const today = new Date();
+  const month = today.getMonth() + 1;
+  const datestring = `${month}-${today.getDate()}-${today.getFullYear()}`;
+  return datestring;
+}
+
+function appendToLogFile() {
+  const parsedLog = readLogFile();
+
+  const datestring = getTodayDate();
+  if (!parsedLog[datestring]) {
+    parsedLog[datestring] = {};
+  }
+  if (!parsedLog[datestring][task]) {
+    parsedLog[datestring][task] = 0;
+  }
+
+  parsedLog[datestring][task] += focusDuration;
+
+  fs.writeFileSync(logFile, toml.stringify(parsedLog));
+}
+
 async function main() {
   for (let currentSession = 1; currentSession <= sessions; ++currentSession) {
     console.log(getSessionStartMessage(currentSession));
@@ -155,6 +193,7 @@ async function main() {
       await playFocusMusic();
     }
     await wait(focusDuration);
+    appendToLogFile();
 
     if (currentSession < sessions) {
       console.log(getRestMessage());
@@ -166,6 +205,8 @@ async function main() {
   console.log(
     chalk.green.bold("### 🎉 Congrats! You finished your focus sessions ###")
   );
+  console.log(chalk.green.bold("\nToday's stats (minutes):"));
+  console.log(chalk.green(toml.stringify(readLogFile()[getTodayDate()])));
 
   await playDoneMusic();
 }
