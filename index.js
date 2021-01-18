@@ -114,7 +114,7 @@ async function stopMusic() {
 }
 
 function getSessionStartMessage(currentSession) {
-  const prefix = `### Focus for ${focusDuration}min (${currentSession}/${sessions})`;
+  const prefix = `### 🧑🏻‍💻 Focus for ${focusDuration}min (${currentSession}/${sessions})`;
   const suffix = "###";
   let msg = "";
   if (goal) {
@@ -127,7 +127,9 @@ function getSessionStartMessage(currentSession) {
 }
 
 function getRestMessage() {
-  return chalk.magenta.bold(`### Nice work, rest for ${restDuration}min ###`);
+  return chalk.magenta.bold(
+    `### 😌 Nice work, rest for ${restDuration}min ###`
+  );
 }
 
 async function setVolume(volume) {
@@ -162,7 +164,7 @@ async function main() {
   }
 
   console.log(
-    chalk.green.bold("### Congrats! You finished your focus sessions :)")
+    chalk.green.bold("### 🎉 Congrats! You finished your focus sessions ###")
   );
 
   await playDoneMusic();
