@@ -1,6 +1,6 @@
 # focuson
 
-Pomodoro + Spotify + Cli + macOS.
+Pomodoro + Spotify + Command line + macOS.
 
 ## Usage
 
