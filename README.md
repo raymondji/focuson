@@ -66,6 +66,10 @@ Clone this repo somewhere you're happy to leave it.
 > npm install -g ${repo_path}
 ```
 
+## Future work
+
+Make compatible with https://github.com/pwittchen/spotify-cli-linux for linux support.
+
 ## Credits
 
 Referenced [shpotify](https://github.com/hnarayanan/shpotify/blob/master/spotify) for spotify applescript commands.
