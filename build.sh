@@ -1,1 +1,0 @@
-pkg . --targets latest-macos-x64 --output bin/focuson

@@ -1,0 +1,18 @@
+{
+  "sessions": 3,
+  "focus": {
+    "uri": "spotify:playlist:0vvXsWCC9xrXsKd4FyS8kM",
+    "volume": 55,
+    "duration": 20
+  },
+  "rest": {
+    "uri": "spotify:track:7HrE6HtYNBbGqp5GmHbFV0",
+    "volume": 55,
+    "duration": 1
+  },
+  "done": {
+    "uri": "spotify:artist:2wY79sveU1sp5g7SokKOiI",
+    "volume": 40,
+    "duration": 25
+  }
+}

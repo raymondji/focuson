@@ -1,34 +1,22 @@
+#!/usr/bin/env node
+
 const commandLineArgs = require("command-line-args");
 const util = require("util");
 const exec = util.promisify(require("child_process").exec);
 const chalk = require("chalk");
 const fs = require("fs");
-const toml = require("@iarna/toml");
 const { homedir } = require("os");
 
 // ========================
 // Read config file options
 // ========================
-const configFile = `${homedir()}/.focuson.cfg.toml`;
+const configFile = `${homedir()}/.focuson.cfg.json`;
 
 let CONFIG = {};
 if (fs.existsSync(configFile)) {
   console.log(chalk.dim(`Reading config file from ${configFile}`));
-  CONFIG = toml.parse(fs.readFileSync(configFile, "utf8"));
+  CONFIG = JSON.parse(fs.readFileSync(configFile, "utf8"));
 }
-
-const focusUri = CONFIG["focus"]["uri"]; // "spotify:playlist:0vvXsWCC9xrXsKd4FyS8kM";
-const focusVolume = CONFIG["focus"]["volume"] ? CONFIG["focus"]["volume"] : 50;
-const restUri = CONFIG["rest"]["uri"]; // "spotify:track:7HrE6HtYNBbGqp5GmHbFV0";
-const restVolume = CONFIG["rest"]["volume"] ? CONFIG["rest"]["volume"] : 50;
-const doneUri = CONFIG["done"]["uri"]; // "spotify:playlist:1OJW3eYKYtMNVlF8AbRV0q";
-const doneVolume = CONFIG["done"]["volume"] ? CONFIG["done"]["volume"] : 50;
-const defaultSessions = CONFIG["defaultSessions"]
-  ? CONFIG["defaultSessions"]
-  : 3;
-const logFile = CONFIG["logFile"]
-  ? CONFIG["logFile"]
-  : `${homedir()}/focuson.log.txt`;
 
 // =============
 // Read cli args
@@ -44,75 +32,71 @@ const cliArgsDefinitions = [
   { name: "sessions", alias: "s", type: String },
   { name: "focusDuration", alias: "f", type: Number },
   { name: "restDuration", alias: "r", type: Number },
+  { name: "doneDuration", alias: "d", type: Number },
   { name: "quiet", alias: "q", type: Boolean },
 ];
 
 const cliArgs = commandLineArgs(cliArgsDefinitions);
 
-const task = cliArgs.task ? cliArgs.task.join(" ") : null;
+// ==========================
+// Set all script parameters
+// ==========================
 
-const sessions = cliArgs.sessions ? cliArgs.sessions : defaultSessions;
-const defaultFocusDuration = CONFIG["focus"]["defaultDuration"]
-  ? CONFIG["focus"]["defaultDuration"]
-  : 20;
-const focusDuration = cliArgs.focusDuration
-  ? cliArgs.focusDuration
-  : defaultFocusDuration;
-const defaultRestDuration = CONFIG["rest"]["defaultDuration"]
-  ? CONFIG["rest"]["defaultDuration"]
-  : 1;
-const restDuration = cliArgs.restDuration
-  ? cliArgs.restDuration
-  : defaultRestDuration;
-const quiet = cliArgs.quiet ? cliArgs.quiet : false;
+const task = cliArgs.task ? cliArgs.task.join(" ") : "unspecified";
+const quiet = cliArgs.quiet ?? false;
+const sessions = cliArgs.sessions ?? CONFIG["sessions"] ?? 3;
+const focusConfig = {
+  uri: CONFIG["focus"]["uri"] ?? null,
+  volume: CONFIG["focus"]["volume"] ?? null,
+  duration: cliArgs.focusDuration ?? CONFIG["focus"]["duration"] ?? 20,
+};
+const restConfig = {
+  uri: CONFIG["rest"]["uri"] ?? null,
+  volume: CONFIG["rest"]["volume"] ?? null,
+  duration: cliArgs.restDuration ?? CONFIG["rest"]["duration"] ?? 1,
+};
+const doneConfig = {
+  uri: CONFIG["done"]["uri"] ?? null,
+  volume: CONFIG["done"]["volume"] ?? null,
+  duration: cliArgs.doneDuration ?? CONFIG["done"]["duration"] ?? 20,
+};
+const logFile = `${homedir()}/focuson.log.txt`;
 
-// ===========
-// Main script
-// ===========
+// ==================
+// Main script begins
+// ==================
 
-async function playFocusMusic() {
-  if (!focusUri) {
-    console.log(chalk.dim("Shh, no focus URI set."));
+async function playMusic(kind) {
+  let config;
+  if (kind === "focus") {
+    config = focusConfig;
+  } else if (kind === "rest") {
+    config = restConfig;
+  } else if (kind === "done") {
+    config = doneConfig;
+  }
+
+  if (!config.uri) {
+    console.log(chalk.dim("Shh, no URI set."));
     await stopMusic();
     return;
   }
 
-  await setVolume(focusVolume);
-  await playSpotifyUri(focusUri);
-}
+  await setVolume(config.volume);
 
-async function playRestMusic() {
-  if (!restUri) {
-    console.log(chalk.dim("Shh, no rest URI set."));
-    await stopMusic();
-    return;
-  }
-
-  await setVolume(restVolume);
-  await playSpotifyUri(restUri);
-}
-
-async function playDoneMusic() {
-  if (!doneUri) {
-    console.log(chalk.dim("Shh, no done URI set."));
-    await stopMusic();
-    return;
-  }
-
-  await setVolume(doneVolume);
-  await playSpotifyUri(doneUri);
-}
-
-async function playSpotifyUri(uri) {
-  const { _, stderr } = await exec(`spotify play uri ${uri}`);
+  const { _, stderr } = await exec(
+    `osascript -e 'tell application "Spotify" to play track "${config.uri}"'`
+  );
   if (stderr) {
     console.error(stderr);
   }
-  console.log(chalk.dim("Playing music."));
+  console.log(chalk.dim(`Playing ${kind} music...`));
 }
 
 async function stopMusic() {
-  const { _, stderr } = await exec("spotify stop");
+  const { _, stderr } = await exec(
+    `osascript -e 'tell application "Spotify" to pause'`
+  );
   if (stderr) {
     console.error(stderr);
   }
@@ -120,7 +104,7 @@ async function stopMusic() {
 }
 
 function getSessionStartMessage(currentSession) {
-  const prefix = `### 🧑🏻‍💻 Focus for ${focusDuration}min (${currentSession}/${sessions})`;
+  const prefix = `### 🧑🏻‍💻 Focus for ${focusConfig.duration}min (${currentSession}/${sessions})`;
   const suffix = "###";
   let msg = "";
   if (task) {
@@ -134,12 +118,14 @@ function getSessionStartMessage(currentSession) {
 
 function getRestMessage() {
   return chalk.magenta.bold(
-    `### 😌 Nice work, rest for ${restDuration}min ###`
+    `### 😌 Nice work, rest for ${restConfig.duration}min ###`
   );
 }
 
 async function setVolume(volume) {
-  const { _, stderr } = exec(`spotify vol ${volume}`);
+  const { _, stderr } = exec(
+    `osascript -e 'tell application "Spotify" to set sound volume to ${volume}'`
+  );
   if (stderr) {
     console.error(stderr);
   }
@@ -155,7 +141,7 @@ async function wait(minutes) {
 function readLogFile() {
   let parsedLog = {};
   if (fs.existsSync(logFile)) {
-    parsedLog = toml.parse(fs.readFileSync(logFile, "utf-8"));
+    parsedLog = JSON.parse(fs.readFileSync(logFile, "utf-8"));
   }
 
   return parsedLog;
@@ -168,7 +154,7 @@ function getTodayDate() {
   return datestring;
 }
 
-function appendToLogFile() {
+function updateLogFile() {
   const parsedLog = readLogFile();
 
   const datestring = getTodayDate();
@@ -179,37 +165,54 @@ function appendToLogFile() {
     parsedLog[datestring][task] = 0;
   }
 
-  parsedLog[datestring][task] += focusDuration;
+  parsedLog[datestring][task] += focusConfig.duration;
 
-  fs.writeFileSync(logFile, toml.stringify(parsedLog));
+  fs.writeFileSync(logFile, JSON.stringify(parsedLog));
+}
+
+function printDoneMessages() {
+  console.log(
+    chalk.green.bold("### 🎉 Congrats! You finished your focus sessions ###")
+  );
+  console.log("");
+  console.log(chalk.green.bold("Today's focused work:"));
+  const todayStats = readLogFile()[getTodayDate()];
+  const tasks = Object.getOwnPropertyNames(todayStats);
+  for (let task of tasks) {
+    const minutes = todayStats[task];
+    console.log(chalk.green(`${task}: ${minutes}min`));
+  }
+  console.log("");
+  console.log(chalk.dim(`View work log at ${logFile}`));
 }
 
 async function main() {
   for (let currentSession = 1; currentSession <= sessions; ++currentSession) {
     console.log(getSessionStartMessage(currentSession));
     if (quiet) {
-      await stopbhMusic();
+      await stopMusic();
     } else {
-      await playFocusMusic();
+      await playMusic("focus");
     }
-    await wait(focusDuration);
-    appendToLogFile();
+    await wait(focusConfig.duration);
+    updateLogFile();
 
     if (currentSession < sessions) {
       console.log(getRestMessage());
-      await playRestMusic();
-      await wait(restDuration);
+      await playMusic("rest");
+      await wait(restConfig.duration);
     }
   }
 
-  console.log(
-    chalk.green.bold("### 🎉 Congrats! You finished your focus sessions ###")
-  );
-  console.log(chalk.green.bold("\nToday's stats (minutes):"));
-  console.log(chalk.green(toml.stringify(readLogFile()[getTodayDate()])));
-
-  await playDoneMusic();
+  printDoneMessages();
+  await playMusic("done");
+  await wait(doneConfig.duration);
+  await stopMusic();
 }
+
+main().catch((error) => {
+  console.log(error);
+});
 
 process.on("SIGINT", function () {
   console.log(chalk.bold.gray("\nStopping..."));
@@ -217,8 +220,4 @@ process.on("SIGINT", function () {
   stopMusic().finally(() => {
     process.exit();
   });
-});
-
-main().catch((error) => {
-  console.log(error);
 });
