@@ -40,7 +40,7 @@ User configuration:
 > cp .focuson.cfg.example.json $HOME/.focuson.cfg.json
 ```
 
-Commandline flags
+Command line flags
 
 ```
 # do 5 focus sessions
