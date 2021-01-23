@@ -180,7 +180,7 @@ function printDoneMessages() {
   const tasks = Object.getOwnPropertyNames(todayStats);
   for (let task of tasks) {
     const minutes = todayStats[task];
-    console.log(chalk.green(`${task}: ${minutes}min`));
+    console.log(chalk.green(`${minutes}min ${task}`));
   }
   console.log("");
   console.log(chalk.dim(`View work log at ${logFile}`));

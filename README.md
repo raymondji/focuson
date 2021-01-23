@@ -5,27 +5,28 @@ Pomodoro + Spotify + Cli + macOS.
 ## Usage
 
 ```
-> focuson updating the docs
+> focuson building todo app
 Reading config file from /Users/spiderman/.focuson.cfg.json
-### 🧑🏻‍💻 Focus for 20min (1/3): updating the docs ###
+### 🧑🏻‍💻 Focus for 20min (1/3): building todo app ###
 Volume: 35
 Playing focus music...
 ### 😌 Nice work, rest for 1min ###
 Volume: 55
 Playing rest music...
-### 🧑🏻‍💻 Focus for 20min (2/3): updating the docs ###
+### 🧑🏻‍💻 Focus for 20min (2/3): building todo app ###
 Volume: 35
 Playing focus music...
 ### 😌 Nice work, rest for 1min ###
 Volume: 55
 Playing rest music...
-### 🧑🏻‍💻 Focus for 20min (3/3): updating the docs ###
+### 🧑🏻‍💻 Focus for 20min (3/3): building todo app ###
 Volume: 35
 Playing focus music...
 ### 🎉 Congrats! You finished your focus sessions ###
 
 Today's focused work:
-updating the docs: 60min
+60min building todo app
+40min learning nodejs
 
 View work log at /Users/raymondji/focuson.log.txt
 Volume: 40
