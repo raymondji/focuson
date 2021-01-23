@@ -191,6 +191,7 @@ async function main() {
     console.log(getSessionStartMessage(currentSession));
     if (quiet) {
       await stopMusic();
+      console.log(chalk.dim("Quiet focus time..."));
     } else {
       await playMusic("focus");
     }
