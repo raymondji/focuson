@@ -52,8 +52,8 @@ Command line flags
 > focuson -f 10 -r 5 -d 20
 
 # don't play music during the focus sessions
-> focuson --quiet
-> focuson -q
+> focuson learning javascript --quiet
+> focuson learning javascript -q
 ```
 
 ## Installation
