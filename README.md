@@ -57,6 +57,8 @@ Commandline flags
 
 ## Installation
 
+Install the Spotify desktop app.
+
 Clone this repo somewhere you're happy to leave it.
 
 ```
