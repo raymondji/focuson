@@ -60,7 +60,7 @@ const doneConfig = {
   volume: CONFIG["done"]["volume"] ?? null,
   duration: cliArgs.doneDuration ?? CONFIG["done"]["duration"] ?? 20,
 };
-const logFile = `${homedir()}/focuson.log.txt`;
+const logFile = `${homedir()}/focuson.log.json`;
 
 // ==================
 // Main script begins
@@ -176,7 +176,7 @@ function printDoneMessages() {
   );
   console.log("");
   console.log(chalk.green.bold("Today's focused work:"));
-  const todayStats = readLogFile()[getTodayDate()];
+  const todayStats = readLogFile()[getTodayDate()] ?? {};
   const tasks = Object.getOwnPropertyNames(todayStats);
   for (let task of tasks) {
     const minutes = todayStats[task];

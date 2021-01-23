@@ -28,7 +28,7 @@ Today's focused work:
 60min building todo app
 40min learning nodejs
 
-View work log at /Users/raymondji/focuson.log.txt
+View work log at /Users/raymondji/focuson.log.json
 Volume: 40
 Playing done music...
 Stopped music.
