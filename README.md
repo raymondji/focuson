@@ -68,7 +68,7 @@ Clone this repo somewhere you're happy to leave it.
 
 ## Future work
 
-Make compatible with https://github.com/pwittchen/spotify-cli-linux for linux support.
+Add linux support via https://github.com/pwittchen/spotify-cli-linux.
 
 ## Credits
 
